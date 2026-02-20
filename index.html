@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ramadan 1446 — Daily Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #080E18;
+  --bg2: #0D1520;
+  --panel: #111D2E;
+  --panel2: #162335;
+  --border: rgba(255,255,255,0.06);
+  --gold: #D4A843;
+  --gold2: #F0C76A;
+  --gold-dim: rgba(212,168,67,0.15);
+  --teal: #2EC4B6;
+  --teal-dim: rgba(46,196,182,0.12);
+  --prayer-c: #9B6DFF;
+  --prayer-dim: rgba(155,109,255,0.12);
+  --meal-c: #F4845F;
+  --meal-dim: rgba(244,132,95,0.12);
+  --ibadah-c: #F9C74F;
+  --ibadah-dim: rgba(249,199,79,0.12);
+  --work-c: #43AA8B;
+  --work-dim: rgba(67,170,139,0.12);
+  --health-c: #F48FB1;
+  --health-dim: rgba(244,143,177,0.12);
+  --text: #E8DCC8;
+  --muted: #5A7A9A;
+  --today-glow: rgba(212,168,67,0.25);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Sora', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── HEADER ── */
+.header {
+  background: linear-gradient(180deg, #0A1622 0%, var(--bg) 100%);
+  border-bottom: 1px solid var(--border);
+  padding: 18px 28px;
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+  position: sticky; top: 0; z-index: 100;
+  backdrop-filter: blur(12px);
+}
+.header-left h1 { font-family: 'Amiri', serif; font-size: 26px; color: var(--gold); letter-spacing: 1px; line-height: 1; }
+.header-left p { font-size: 11px; color: var(--muted); margin-top: 3px; letter-spacing: 1.5px; text-transform: uppercase; }
+
+.header-stats { display: flex; gap: 16px; flex-wrap: wrap; }
+.hstat {
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 10px; padding: 8px 14px; text-align: center;
+}
+.hstat-val { font-size: 20px; font-weight: 700; color: var(--gold); line-height: 1; }
+.hstat-lbl { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 1.5px; margin-top: 3px; }
+
+/* ── SECTION TITLES ── */
+.sec-title {
+  font-size: 10px; text-transform: uppercase; letter-spacing: 2.5px;
+  color: var(--muted); display: flex; align-items: center; gap: 10px;
+  margin: 28px 28px 14px;
+}
+.sec-title::after { content:''; flex:1; height:1px; background: var(--border); }
+
+/* ── TABLE WRAPPER ── */
+.table-wrapper {
+  margin: 0 28px 8px;
+  overflow-x: auto;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+}
+
+table {
+  border-collapse: collapse;
+  min-width: 100%;
+  white-space: nowrap;
+}
+
+/* Sticky row/col headers */
+th, td { border: 1px solid rgba(255,255,255,0.04); }
+
+/* Row label column */
+.col-cat, .col-task {
+  position: sticky; left: 0;
+  background: var(--panel2);
+  z-index: 10;
+}
+.col-cat { left: 0; min-width: 110px; }
+.col-task { left: 110px; min-width: 140px; border-right: 1px solid rgba(255,255,255,0.1) !important; }
+
+/* Header row sticky */
+thead tr { position: sticky; top: 0; z-index: 20; }
+thead .col-cat, thead .col-task { z-index: 30; }
+
+/* Category header cell */
+.cat-header {
+  padding: 12px 14px; font-size: 9px; text-transform: uppercase; letter-spacing: 2px;
+  font-weight: 700; background: var(--panel2); text-align: left;
+}
+/* Task label */
+.task-label {
+  padding: 0 12px;
+  font-size: 11px; font-weight: 500; background: var(--panel2);
+  vertical-align: middle;
+}
+.task-label-inner { display: flex; align-items: center; gap: 7px; }
+.task-icon { font-size: 13px; }
+.task-pts-badge {
+  font-size: 8px; font-weight: 700; padding: 1px 5px; border-radius: 4px;
+  margin-left: auto;
+}
+
+/* Category row group header */
+.cat-group-row td, .cat-group-row th {
+  height: 30px; font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+  background: var(--bg2) !important; border-top: 2px solid rgba(255,255,255,0.06) !important;
+  padding: 0 10px;
+}
+.task-row td, .task-row th { height: 40px; }
+
+/* Day header */
+.day-header {
+  min-width: 36px; text-align: center; padding: 6px 2px;
+  font-size: 9px; color: var(--muted); font-weight: 500;
+  letter-spacing: 0.5px; background: var(--panel2);
+  vertical-align: bottom;
+}
+.day-header .day-num { font-size: 12px; font-weight: 700; color: var(--text); display: block; }
+.day-header .day-name { font-size: 8px; color: var(--muted); display: block; text-transform: uppercase; }
+.day-header.today-col { background: rgba(212,168,67,0.08); }
+.day-header.today-col .day-num { color: var(--gold); }
+.day-header.weekend { background: rgba(255,255,255,0.015); }
+
+/* Tick cell */
+.tick-cell {
+  text-align: center; vertical-align: middle; cursor: pointer;
+  transition: background 0.15s;
+  padding: 0;
+}
+.tick-cell:hover { background: rgba(255,255,255,0.04); }
+.tick-btn {
+  width: 28px; height: 28px; border-radius: 7px;
+  border: 1.5px solid rgba(255,255,255,0.08);
+  background: transparent; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto;
+  transition: all 0.2s cubic-bezier(0.34,1.56,0.64,1);
+  font-size: 13px; color: transparent;
+}
+.tick-btn:hover { border-color: rgba(255,255,255,0.2); transform: scale(1.1); }
+.tick-btn.checked { color: white; transform: scale(1.05); }
+.tick-cell.today-col { background: rgba(212,168,67,0.04); }
+
+/* Day total row */
+.day-total-row td { height: 34px; text-align: center; font-size: 11px; font-weight: 700; padding: 4px; background: var(--bg2); border-top: 2px solid rgba(255,255,255,0.06) !important; }
+.day-total-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); }
+
+/* Day score pill */
+.day-score {
+  display: inline-block; padding: 3px 8px; border-radius: 99px;
+  font-size: 11px; font-weight: 700; min-width: 28px;
+}
+
+/* ── CHARTS SECTION ── */
+.charts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin: 0 28px 28px;
+}
+.chart-full { grid-column: 1/-1; }
+@media (max-width: 750px) { .charts-grid { grid-template-columns: 1fr; } .chart-full { grid-column: 1; } }
+
+.chart-card {
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 16px; padding: 22px;
+}
+.chart-card h3 { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+.chart-card p { font-size: 11px; color: var(--muted); margin-bottom: 18px; }
+.chart-container { position: relative; }
+
+/* Celebration toast */
+.toast {
+  position: fixed; bottom: 28px; right: 28px;
+  background: linear-gradient(135deg, var(--teal), #1a9e94);
+  color: white; border-radius: 12px; padding: 12px 20px;
+  font-size: 13px; font-weight: 600;
+  transform: translateY(80px); opacity: 0;
+  transition: all 0.4s cubic-bezier(0.34,1.56,0.64,1);
+  z-index: 999; pointer-events: none;
+  box-shadow: 0 8px 32px rgba(46,196,182,0.3);
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+
+/* Scrollbar */
+.table-wrapper::-webkit-scrollbar { height: 6px; }
+.table-wrapper::-webkit-scrollbar-track { background: var(--bg2); }
+.table-wrapper::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+
+/* Ornament */
+.ornament {
+  text-align: center; padding: 12px;
+  font-family: 'Amiri', serif; color: rgba(212,168,67,0.3);
+  font-size: 28px; letter-spacing: 8px;
+  margin: 8px 28px;
+}
+
+.dua-list {
+  list-style: none;
+  padding-left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dua-list li {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 13px;
+  letter-spacing: 0.3px;
+  position: relative;
+}
+
+.dua-list li::before {
+  content: "✦";
+  color: var(--gold);
+  margin-right: 10px;
+}
+
+
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <h1>🌙 رمضان ١٤٤٦ — Ramadan Tracker</h1>
+    <p>Feb 19 → Mar 20 · Make every moment count</p>
+  </div>
+  <div class="header-stats">
+    <div class="hstat"><div class="hstat-val" id="h-total">0</div><div class="hstat-lbl">Total pts</div></div>
+    <div class="hstat"><div class="hstat-val" id="h-today">0</div><div class="hstat-lbl">Today pts</div></div>
+    <div class="hstat"><div class="hstat-val" id="h-streak">0</div><div class="hstat-lbl">🔥 Streak</div></div>
+    <div class="hstat"><div class="hstat-val" id="h-pct">0%</div><div class="hstat-lbl">Today done</div></div>
+  </div>
+</div>
+
+<div class="ornament">✦ ❖ ✦ ❖ ✦</div>
+
+<div class="sec-title">📅 Ramadan 1446 — Daily Tracker Table</div>
+<div class="table-wrapper">
+  <table id="main-table"></table>
+</div>
+
+<div class="sec-title">📊 Performance Analytics</div>
+<div class="charts-grid">
+
+  <div class="chart-card chart-full">
+    <h3>📈 Daily Points — Full Ramadan</h3>
+    <p>Total score per day from Feb 19 to Mar 20. Click the table above to track tasks.</p>
+    <div class="chart-container" style="height:200px"><canvas id="chart-line"></canvas></div>
+  </div>
+
+  <div class="chart-card">
+    <h3>🥧 Today's Category Breakdown</h3>
+    <p>Points scored by category today</p>
+    <div class="chart-container" style="height:220px"><canvas id="chart-pie-today"></canvas></div>
+  </div>
+
+  <div class="chart-card">
+    <h3>🍕 Overall Category Performance</h3>
+    <p>Completion % per category — all days</p>
+    <div class="chart-container" style="height:220px"><canvas id="chart-pie-total"></canvas></div>
+  </div>
+
+  <div class="chart-card chart-full">
+    <h3>📊 Weekly Comparison</h3>
+    <p>Average daily score per week of Ramadan (Wk 1: Feb 19–25 · Wk 2: Feb 26–Mar 4 · Wk 3: Mar 5–11 · Wk 4: Mar 12–20)</p>
+    <div class="chart-container" style="height:160px"><canvas id="chart-weekly"></canvas></div>
+  </div>
+
+  <div class="chart-card chart-full">
+    <h3>🎯 Category Progress Bars — Cumulative</h3>
+    <p>Total tasks completed vs total possible across all tracked days</p>
+    <div id="progress-bars" style="display:flex;flex-direction:column;gap:12px;margin-top:4px;"></div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast">✅ +<span id="toast-pts">0</span> pts</div>
+
+<script>
+// ─── CONFIG ───────────────────────────────────────────
+const RAMADAN_START = new Date('2026-02-19');
+const RAMADAN_END   = new Date('2026-03-20');
+
+// Generate all days Feb 19 → Mar 20
+const DAYS = [];
+for (let d = new Date(RAMADAN_START); d <= RAMADAN_END; d.setDate(d.getDate()+1)) {
+  DAYS.push(new Date(d));
+}
+
+const TOTAL_DAYS = DAYS.length; // 30
+
+const CATEGORIES = [
+  {
+    id: 'prayer', label: 'Prayers 🕌', color: '#9B6DFF',
+    tasks: [
+      { id: 'fajr',    name: 'Fajr',    icon: '🌄', pts: 10 },
+      { id: 'dhuhr',   name: 'Dhuhr',   icon: '☀️',  pts: 10 },
+      { id: 'asr',     name: 'Asr',     icon: '🌤️',  pts: 10 },
+      { id: 'maghrib', name: 'Maghrib', icon: '🌇', pts: 10 },
+      { id: 'isha',    name: 'Isha',    icon: '🌙', pts: 10 },
+    ]
+  },
+  {
+    id: 'meal', label: 'Meals 🍽️', color: '#F4845F',
+    tasks: [
+      { id: 'suhur', name: 'Suhur', icon: '🌙', pts: 6 },
+      { id: 'iftar', name: 'Iftar', icon: '🌅', pts: 6 },
+    ]
+  },
+  {
+    id: 'ibadah', label: 'Ibadah 🤲', color: '#F9C74F',
+    tasks: [
+      { id: 'quran', name: 'Quran 30m',   icon: '📖', pts: 8 },
+      { id: 'dzikr', name: 'Dzikr',       icon: '🤲', pts: 8 },
+    ]
+  },
+  {
+    id: 'work', label: 'Productivity 💼', color: '#43AA8B',
+    tasks: [
+      { id: 'coding',  name: 'Coding 1.5h',  icon: '💻', pts: 8 },
+      { id: 'diploma', name: 'Diploma 2h',   icon: '📚', pts: 8 },
+    ]
+  },
+  {
+    id: 'health', label: 'Health 💪', color: '#F48FB1',
+    tasks: [
+      { id: 'workout', name: 'Workout 30m', icon: '💪', pts: 6 },
+    ]
+  },
+];
+
+const ALL_TASKS = CATEGORIES.flatMap(c => c.tasks.map(t => ({ ...t, catId: c.id })));
+const TOTAL_PTS_PER_DAY = ALL_TASKS.reduce((s, t) => s + t.pts, 0);
+
+const CAT_COLORS = Object.fromEntries(CATEGORIES.map(c => [c.id, c.color]));
+const CAT_LABELS = Object.fromEntries(CATEGORIES.map(c => [c.id, c.label]));
+
+// ─── STATE ────────────────────────────────────────────
+let state = {};
+try { state = JSON.parse(localStorage.getItem('ram1446') || '{}'); } catch(e) {}
+
+function save() { localStorage.setItem('ram1446', JSON.stringify(state)); }
+
+function dayKey(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function isChecked(dayKey, taskId) { return !!(state[dayKey]?.[taskId]); }
+
+function toggle(dk, taskId, pts) {
+  if (!state[dk]) state[dk] = {};
+  if (state[dk][taskId]) {
+    delete state[dk][taskId];
+  } else {
+    state[dk][taskId] = true;
+    showToast(pts);
+  }
+  save();
+  updateBtn(dk, taskId);
+  updateDayScore(dk);
+  updateHeader();
+  updateCharts();
+}
+
+// ─── TODAY ────────────────────────────────────────────
+function getToday() {
+  const t = new Date()
+  t.setHours(0,0,0,0)
+  return t
+}
+
+function isToday(d) {
+  return dayKey(d) === dayKey(getToday())
+}
+
+function isFuture(d) {
+  const check = new Date(d)
+  check.setHours(0,0,0,0)
+  return check > getToday()
+}
+
+function getTodayKey() {
+  return dayKey(getToday())
+}
+
+// ─── TABLE BUILD ──────────────────────────────────────
+function buildTable() {
+  const table = document.getElementById('main-table');
+  const thead = document.createElement('thead');
+  const tbody = document.createElement('tbody');
+
+  // Header row 1: Cat + Task + day columns
+  const hr = document.createElement('tr');
+
+  const thCat = document.createElement('th');
+  thCat.className = 'cat-header col-cat';
+  thCat.style.verticalAlign = 'bottom';
+  thCat.textContent = 'Category';
+  hr.appendChild(thCat);
+
+  const thTask = document.createElement('th');
+  thTask.className = 'cat-header col-task';
+  thTask.style.verticalAlign = 'bottom';
+  thTask.textContent = 'Task';
+  hr.appendChild(thTask);
+
+  DAYS.forEach(d => {
+    const th = document.createElement('th');
+    th.className = 'day-header' + (isToday(d) ? ' today-col' : '') + ([0,6].includes(d.getDay()) ? ' weekend' : '');
+    th.id = 'dayhdr-' + dayKey(d);
+    const dayNames = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+    th.innerHTML = `<span class="day-num">${d.getDate()}</span><span class="day-name">${dayNames[d.getDay()]}</span>`;
+    hr.appendChild(th);
+  });
+
+  thead.appendChild(hr);
+  table.appendChild(thead);
+
+  // Body: category groups + task rows
+  CATEGORIES.forEach(cat => {
+    // Category group separator row
+    const catRow = document.createElement('tr');
+    catRow.className = 'cat-group-row';
+
+    const tdCat = document.createElement('td');
+    tdCat.className = 'col-cat';
+    tdCat.colSpan = 2;
+    tdCat.style.color = cat.color;
+    tdCat.textContent = cat.label;
+    catRow.appendChild(tdCat);
+
+    DAYS.forEach(d => {
+      const td = document.createElement('td');
+      td.style.background = 'var(--bg2)';
+      td.style.borderTop = '2px solid rgba(255,255,255,0.06)';
+      if (isToday(d)) td.style.background = 'rgba(212,168,67,0.04)';
+      catRow.appendChild(td);
+    });
+    tbody.appendChild(catRow);
+
+    // Task rows
+    cat.tasks.forEach(task => {
+      const row = document.createElement('tr');
+      row.className = 'task-row';
+
+      // Empty cat cell (for visual grouping)
+      const tdC = document.createElement('td');
+      tdC.className = 'col-cat';
+      tdC.style.borderLeft = `3px solid ${cat.color}`;
+      row.appendChild(tdC);
+
+      // Task label
+      const tdL = document.createElement('td');
+      tdL.className = 'task-label col-task';
+      tdL.innerHTML = `<div class="task-label-inner">
+        <span class="task-icon">${task.icon}</span>
+        <span>${task.name}</span>
+        <span class="task-pts-badge" style="background:${cat.color}22;color:${cat.color}">+${task.pts}</span>
+      </div>`;
+      row.appendChild(tdL);
+
+      // Day cells
+      DAYS.forEach(d => {
+        const dk = dayKey(d);
+        const td = document.createElement('td');
+        td.className = 'tick-cell' + (isToday(d) ? ' today-col' : '');
+
+        const btn = document.createElement('button');
+        btn.className = 'tick-btn' + (isChecked(dk, task.id) ? ' checked' : '');
+        btn.id = `btn-${dk}-${task.id}`;
+        btn.style.setProperty('--c', cat.color);
+        if (isChecked(dk, task.id)) {
+          btn.style.background = cat.color;
+          btn.style.borderColor = cat.color;
+          btn.textContent = '✓';
+        }
+        // Simple lock: today + yesterday only before 6 AM
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+        const cutoff = new Date(today);
+        cutoff.setHours(6, 0, 0, 0);           // 6:00 AM today
+
+        const isTodayCell     = (dk === dayKey(today));
+        const isYesterdayCell = (dk === dayKey(new Date(today.getTime() - 86400000)));
+        const isBefore6AM     = (now < cutoff);
+
+        let canClick = false;
+
+        if (isTodayCell) {
+          canClick = true;
+        } else if (isYesterdayCell && isBefore6AM) {
+          canClick = true;
+        }
+
+        if (canClick) {
+          btn.onclick = () => toggle(dk, task.id, task.pts);
+          btn.style.opacity = '1';
+        } else {
+          btn.style.opacity = '0.4';                    // dim locked days
+          btn.style.cursor   = 'not-allowed';
+          btn.onclick        = null;                    // remove click
+         // optional: btn.title = "Locked";            // tooltip on hover
+        }
+
+        td.appendChild(btn);
+        row.appendChild(td);
+      });
+      tbody.appendChild(row);
+    });
+  });
+
+  // Day total row
+  const totalRow = document.createElement('tr');
+  totalRow.className = 'day-total-row';
+
+  const tdTL = document.createElement('td');
+  tdTL.className = 'col-cat day-total-label';
+  tdTL.colSpan = 2;
+  tdTL.textContent = 'Daily Score';
+  totalRow.appendChild(tdTL);
+
+  DAYS.forEach(d => {
+    const dk = dayKey(d);
+    const td = document.createElement('td');
+    td.id = `total-${dk}`;
+    renderDayScoreCell(td, dk);
+    totalRow.appendChild(td);
+  });
+  tbody.appendChild(totalRow);
+
+  table.appendChild(tbody);
+
+  // Scroll to today
+  setTimeout(() => {
+    const todayHeader = document.getElementById('dayhdr-' + getTodayKey());
+    if (todayHeader) todayHeader.scrollIntoView({ inline: 'center', block: 'nearest' });
+  }, 100);
+}
+
+function getDayScore(dk) {
+  const d = state[dk] || {};
+  return ALL_TASKS.reduce((s, t) => s + (d[t.id] ? t.pts : 0), 0);
+}
+
+function renderDayScoreCell(td, dk) {
+  const score = getDayScore(dk);
+  const pct = Math.round(score / TOTAL_PTS_PER_DAY * 100);
+  let color = 'var(--muted)';
+  if (pct >= 80) color = '#43AA8B';
+  else if (pct >= 50) color = 'var(--gold)';
+  else if (pct > 0) color = '#F4845F';
+  td.innerHTML = `<span class="day-score" style="color:${color};background:${color}22">${score}</span>`;
+}
+
+function updateBtn(dk, taskId) {
+  const task = ALL_TASKS.find(t => t.id === taskId);
+  const cat = CATEGORIES.find(c => c.id === task.catId);
+  const btn = document.getElementById(`btn-${dk}-${taskId}`);
+  if (!btn) return;
+  const checked = isChecked(dk, taskId);
+  btn.className = 'tick-btn' + (checked ? ' checked' : '');
+  if (checked) {
+    btn.style.background = cat.color;
+    btn.style.borderColor = cat.color;
+    btn.textContent = '✓';
+  } else {
+    btn.style.background = '';
+    btn.style.borderColor = '';
+    btn.textContent = '';
+  }
+}
+
+function updateDayScore(dk) {
+  const td = document.getElementById(`total-${dk}`);
+  if (td) renderDayScoreCell(td, dk);
+}
+
+function updateHeader() {
+  const todayKey = getTodayKey()
+
+  const todayScore = getDayScore(todayKey);
+  const todayDone = ALL_TASKS.filter(t => isChecked(todayKey, t.id)).length;
+
+  const totalPts = DAYS.reduce((s, d) => s + getDayScore(dayKey(d)), 0);
+  const pct = Math.round(todayDone / ALL_TASKS.length * 100);
+
+  // Streak
+  let streak = 0;
+  const sorted = [...DAYS].reverse();
+  for (let d of sorted) {
+    if (getDayScore(dayKey(d)) > 0) streak++;
+    else break;
+  }
+
+  document.getElementById('h-total').textContent = totalPts;
+  document.getElementById('h-today').textContent = todayScore;
+  document.getElementById('h-streak').textContent = streak;
+  document.getElementById('h-pct').textContent = pct + '%';
+}
+
+// ─── TOAST ────────────────────────────────────────────
+function showToast(pts) {
+  const t = document.getElementById('toast');
+  document.getElementById('toast-pts').textContent = pts;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 1800);
+}
+
+// ─── CHARTS ───────────────────────────────────────────
+let chartLine, chartPieToday, chartPieTotal, chartWeekly;
+
+const CHART_DEFAULTS = {
+  plugins: { legend: { labels: { color: '#7A9BB5', font: { family: 'Sora', size: 11 }, boxWidth: 10 } } },
+  scales: {}
+};
+
+function axisStyle() {
+  return {
+    grid: { color: 'rgba(255,255,255,0.05)' },
+    ticks: { color: '#5A7A9A', font: { family: 'Sora', size: 10 } },
+    border: { color: 'rgba(255,255,255,0.05)' }
+  };
+}
+
+function initCharts() {
+  const dayLabels = DAYS.map(d => `${d.getDate()}/${d.getMonth()+1}`);
+
+  // ── LINE: Daily points ──
+  const lineCtx = document.getElementById('chart-line').getContext('2d');
+  const lineGrad = lineCtx.createLinearGradient(0, 0, 0, 200);
+  lineGrad.addColorStop(0, 'rgba(212,168,67,0.35)');
+  lineGrad.addColorStop(1, 'rgba(212,168,67,0)');
+
+  chartLine = new Chart(lineCtx, {
+    type: 'line',
+    data: {
+      labels: dayLabels,
+      datasets: [{
+        label: 'Points', data: DAYS.map(d => getDayScore(dayKey(d))),
+        borderColor: '#D4A843', borderWidth: 2,
+        backgroundColor: lineGrad,
+        fill: true, tension: 0.4,
+        pointBackgroundColor: DAYS.map(d => isToday(d) ? '#F0C76A' : '#D4A843'),
+        pointRadius: DAYS.map(d => isToday(d) ? 5 : 3),
+        pointHoverRadius: 7,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: {
+        backgroundColor: '#111D2E', borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1,
+        titleColor: '#E8DCC8', bodyColor: '#7A9BB5',
+        callbacks: { label: ctx => ` ${ctx.raw} pts / ${TOTAL_PTS_PER_DAY} (${Math.round(ctx.raw/TOTAL_PTS_PER_DAY*100)}%)` }
+      }},
+      scales: { x: axisStyle(), y: { ...axisStyle(), min: 0, max: TOTAL_PTS_PER_DAY } }
+    }
+  });
+
+  // ── PIE: Today ──
+  const pieCtx = document.getElementById('chart-pie-today').getContext('2d');
+  chartPieToday = new Chart(pieCtx, {
+    type: 'doughnut',
+    data: {
+      labels: CATEGORIES.map(c => c.label),
+      datasets: [{ data: getCatTodayPts(), backgroundColor: CATEGORIES.map(c => c.color), borderWidth: 2, borderColor: '#111D2E', hoverOffset: 6 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      cutout: '65%',
+      plugins: {
+        legend: { position: 'bottom', labels: { color: '#7A9BB5', font: { family: 'Sora', size: 10 }, boxWidth: 10, padding: 10 } },
+        tooltip: { backgroundColor: '#111D2E', borderColor: 'rgba(255,255,255,0.1)', borderWidth:1, titleColor:'#E8DCC8', bodyColor:'#7A9BB5' }
+      }
+    }
+  });
+
+  // ── PIE: Total ──
+  const pie2Ctx = document.getElementById('chart-pie-total').getContext('2d');
+  chartPieTotal = new Chart(pie2Ctx, {
+    type: 'doughnut',
+    data: {
+      labels: CATEGORIES.map(c => c.label),
+      datasets: [{ data: getCatTotalPcts(), backgroundColor: CATEGORIES.map(c => c.color), borderWidth: 2, borderColor: '#111D2E', hoverOffset: 6 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      cutout: '65%',
+      plugins: {
+        legend: { position: 'bottom', labels: { color: '#7A9BB5', font: { family: 'Sora', size: 10 }, boxWidth: 10, padding: 10 } },
+        tooltip: {
+          backgroundColor: '#111D2E', borderColor: 'rgba(255,255,255,0.1)', borderWidth:1, titleColor:'#E8DCC8', bodyColor:'#7A9BB5',
+          callbacks: { label: ctx => ` ${ctx.raw}% completion` }
+        }
+      }
+    }
+  });
+
+  // ── BAR: Weekly ──
+  const weekCtx = document.getElementById('chart-weekly').getContext('2d');
+  chartWeekly = new Chart(weekCtx, {
+    type: 'bar',
+    data: {
+      labels: ['Week 1 (Feb 19–25)', 'Week 2 (Feb 26–Mar 4)', 'Week 3 (Mar 5–11)', 'Week 4 (Mar 12–20)'],
+      datasets: [{
+        label: 'Avg Daily Score', data: getWeeklyAvg(),
+        backgroundColor: ['rgba(155,109,255,0.7)','rgba(212,168,67,0.7)','rgba(46,196,182,0.7)','rgba(244,132,95,0.7)'],
+        borderColor: ['#9B6DFF','#D4A843','#2EC4B6','#F4845F'],
+        borderWidth: 2, borderRadius: 8, borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: {
+        backgroundColor: '#111D2E', borderColor: 'rgba(255,255,255,0.1)', borderWidth:1,
+        titleColor:'#E8DCC8', bodyColor:'#7A9BB5',
+        callbacks: { label: ctx => ` ${ctx.raw} avg pts / day` }
+      }},
+      scales: { x: axisStyle(), y: { ...axisStyle(), min: 0, max: TOTAL_PTS_PER_DAY } }
+    }
+  });
+
+  renderProgressBars();
+}
+
+function getCatTodayPts() {
+  return CATEGORIES.map(cat => {
+    const scored = cat.tasks.reduce((s, t) => s + (isChecked(getTodayKey(), t.id)? t.pts : 0), 0);
+    return scored;
+  });
+}
+
+function getCatTotalPcts() {
+  return CATEGORIES.map(cat => {
+    const daysWithData = DAYS.filter(d => !isFuture(d));
+    const total = cat.tasks.length * daysWithData.length;
+    if (total === 0) return 0;
+    const done = daysWithData.reduce((s, d) => {
+      return s + cat.tasks.filter(t => isChecked(dayKey(d), t.id)).length;
+    }, 0);
+    return Math.round(done / total * 100);
+  });
+}
+
+function getWeeklyAvg() {
+  const weeks = [
+    DAYS.slice(0, 7),
+    DAYS.slice(7, 14),
+    DAYS.slice(14, 21),
+    DAYS.slice(21, 30),
+  ];
+  return weeks.map(wk => {
+    const past = wk.filter(d => !isFuture(d));
+    if (!past.length) return 0;
+    const avg = past.reduce((s,d) => s + getDayScore(dayKey(d)), 0) / past.length;
+    return Math.round(avg);
+  });
+}
+
+function renderProgressBars() {
+  const container = document.getElementById('progress-bars');
+  container.innerHTML = '';
+  CATEGORIES.forEach(cat => {
+    const daysWithData = DAYS.filter(d => !isFuture(d));
+    const total = cat.tasks.length * daysWithData.length;
+    const done = daysWithData.reduce((s,d) => s + cat.tasks.filter(t => isChecked(dayKey(d), t.id)).length, 0);
+    const pct = total ? Math.round(done/total*100) : 0;
+    const maxPts = cat.tasks.reduce((s,t)=>s+t.pts,0) * daysWithData.length;
+    const earnedPts = daysWithData.reduce((s,d) => s + cat.tasks.reduce((ps,t) => ps + (isChecked(dayKey(d),t.id)?t.pts:0),0), 0);
+
+    container.innerHTML += `
+      <div style="display:flex;align-items:center;gap:12px">
+        <span style="font-size:12px;width:130px;flex-shrink:0;color:${cat.color}">${cat.label}</span>
+        <div style="flex:1;background:rgba(255,255,255,0.05);border-radius:99px;height:10px;overflow:hidden">
+          <div style="width:${pct}%;height:100%;background:${cat.color};border-radius:99px;transition:width 0.8s"></div>
+        </div>
+        <span style="font-size:11px;font-weight:700;color:${cat.color};min-width:35px;text-align:right">${pct}%</span>
+        <span style="font-size:10px;color:var(--muted);min-width:80px">${earnedPts}/${maxPts} pts</span>
+      </div>`;
+  });
+}
+
+function updateCharts() {
+  if (!chartLine) return;
+  chartLine.data.datasets[0].data = DAYS.map(d => getDayScore(dayKey(d)));
+  chartLine.update('none');
+
+  chartPieToday.data.datasets[0].data = getCatTodayPts();
+  chartPieToday.update('none');
+
+  chartPieTotal.data.datasets[0].data = getCatTotalPcts();
+  chartPieTotal.update('none');
+
+  chartWeekly.data.datasets[0].data = getWeeklyAvg();
+  chartWeekly.update('none');
+
+  renderProgressBars();
+}
+
+// ─── INIT ─────────────────────────────────────────────
+buildTable();
+updateHeader();
+initCharts();
+</script>
+
+<div class="sec-title">🤲 Zikr Duas</div>
+
+  <div class="charts-grid">
+  
+  <div class="chart-card chart-full">
+    <h3>This Year</h3>
+  
+    <ul class="dua-list">
+      <li>Getting married</li>
+      <li>Getting diploma with defense score of 4</li>
+      <li>Landing a job as a Data Scientist in a place beyond my expectations</li>
+    </ul>
+  
+    <h3 style="margin-top:18px;">In the Next 5 Years</h3>
+  
+    <ul class="dua-list">
+      <li>Memorising the Qur’an by mind and soul</li>
+      <li>Getting a home</li>
+      <li>Getting a BMW M4</li>
+    </ul>
+  
+  </div>
+  
+</div>
+
+</body>
+</html>
