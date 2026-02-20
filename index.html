@@ -563,7 +563,7 @@ function buildTable() {
         const now = new Date();
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
         const cutoff = new Date(today);
-        cutoff.setHours(6, 0, 0, 0);           // 6:00 AM today
+        cutoff.setHours(8, 0, 0, 0);           // 6:00 AM today
 
         const isTodayCell     = (dk === dayKey(today));
         const isYesterdayCell = (dk === dayKey(new Date(today.getTime() - 86400000)));
@@ -915,3 +915,4 @@ loadState();
 
 </body>
 </html>
+
