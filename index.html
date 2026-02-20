@@ -3,9 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ramadan 1446 — Daily Tracker</title>
+<title>Ramadan 1447 — Daily Tracker</title>
 <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <style>
 :root {
   --bg: #080E18;
@@ -303,6 +305,26 @@ thead .col-cat, thead .col-task { z-index: 30; }
 <div class="toast" id="toast">✅ +<span id="toast-pts">0</span> pts</div>
 
 <script>
+
+// Firebase setup - paste your config here
+const firebaseConfig = {
+  apiKey: "AIzaSyDDWEKb9l1-jlbzm2HEQae6MCIerRDpspE",
+  authDomain: "ramadantracker-647a3.firebaseapp.com",
+  databaseURL: "https://ramadantracker-647a3-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "ramadantracker-647a3",
+  storageBucket: "ramadantracker-647a3.firebasestorage.app",
+  messagingSenderId: "124549880374",
+  appId: "1:124549880374:web:c53c68e30b16b4a4ae1697"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+// Your unique path (change 'bekmirza' to something only you know, like your name or a secret word)
+const userPath = 'users/bekmirza-ramadan-tracker';
+const stateRef = db.ref(userPath + '/state');
+
 // ─── CONFIG ───────────────────────────────────────────
 const RAMADAN_START = new Date('2026-02-19');
 const RAMADAN_END   = new Date('2026-03-20');
@@ -363,9 +385,46 @@ const CAT_LABELS = Object.fromEntries(CATEGORIES.map(c => [c.id, c.label]));
 
 // ─── STATE ────────────────────────────────────────────
 let state = {};
-try { state = JSON.parse(localStorage.getItem('ram1446') || '{}'); } catch(e) {}
 
-function save() { localStorage.setItem('ram1446', JSON.stringify(state)); }
+// Load from Firebase (cloud first), fallback to local
+function loadState() {
+  stateRef.once('value')
+    .then(snapshot => {
+      state = snapshot.val() || {};
+      // Also save to local as backup
+      localStorage.setItem('ram1446', JSON.stringify(state));
+      updateAll();  // refresh UI
+    })
+    .catch(err => {
+      console.log('Firebase load failed, using local only', err);
+      try { state = JSON.parse(localStorage.getItem('ram1446') || '{}'); } catch(e) {}
+      updateAll();
+    });
+}
+
+// Save to both cloud and local
+function save() {
+  localStorage.setItem('ram1446', JSON.stringify(state));
+  stateRef.set(state).catch(err => console.log('Firebase save failed', err));
+}
+
+// Listen for real-time changes from cloud (sync across devices)
+stateRef.on('value', snapshot => {
+  state = snapshot.val() || {};
+  localStorage.setItem('ram1446', JSON.stringify(state)); // keep local in sync
+  updateAll(); // refresh everything
+});
+
+function updateAll() {
+  // Re-render table buttons, scores, header, charts
+  DAYS.forEach(d => {
+    const dk = dayKey(d);
+    ALL_TASKS.forEach(task => updateBtn(dk, task.id));
+    updateDayScore(dk);
+  });
+  updateHeader();
+  updateCharts();
+}
 
 function dayKey(d) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -826,6 +885,7 @@ function updateCharts() {
 buildTable();
 updateHeader();
 initCharts();
+loadState();
 </script>
 
 <div class="sec-title">🤲 Zikr Duas</div>
